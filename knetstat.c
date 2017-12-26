@@ -31,6 +31,20 @@
 
 #include <net/net_namespace.h>
 
+/**
+ * seq_pad - write padding spaces to buffer
+ * @m: seq_file identifying the buffer to which data should be written
+ * @c: the byte to append after padding if non-zero
+ */
+void seq_pad(struct seq_file *m, char c, int start_position, int length)
+{
+	int size = start_position + length - m->count;
+	if (size > 0)
+		seq_printf(m, "%*s", size, "");
+	if (c)
+		seq_putc(m, c);
+}
+
 // Labels corresponding to the TCP states defined in tcp_states.h
 static const char *const tcp_state_names[] = {
 		"NONE",
@@ -72,14 +86,14 @@ static void sock_common_options_show(struct seq_file *seq, struct sock *sk) {
 }
 
 static void addr_port_show(struct seq_file *seq, sa_family_t family, const void* addr, __u16 port) {
-	seq_setwidth(seq, 23);
+	int sp = seq->count;
 	seq_printf(seq, family == AF_INET6 ? "%pI6c" : "%pI4", addr);
 	if (port == 0) {
 		seq_puts(seq, ":*");
 	} else {
 		seq_printf(seq, ":%d", port);
 	}
-	seq_pad(seq, ' ');
+	seq_pad(seq, ' ', sp, 23);
 }
 
 static int tcp_seq_show(struct seq_file *seq, void *v) {
@@ -202,7 +216,7 @@ static int tcp_seq_show(struct seq_file *seq, void *v) {
 
 		seq_printf(seq, "%s ", tcp_state_names[state]);
 		if (sk != NULL) {
-			seq_setwidth(seq, 4);
+			int sp = seq->count;
 			if (state == TCP_ESTABLISHED) {
 				const struct tcp_sock *tp = tcp_sk(sk);
 				if (tp->rcv_wnd == 0 && tp->snd_wnd == 0) {
@@ -220,7 +234,7 @@ static int tcp_seq_show(struct seq_file *seq, void *v) {
 					seq_puts(seq, ">#");
 				}
 			}
-			seq_pad(seq, ' ');
+			seq_pad(seq, ' ', sp, 4);
 
 
 			seq_printf(seq, "SO_REUSEADDR=%d,SO_REUSEPORT=%d,SO_KEEPALIVE=%d", sk->sk_reuse, sk->sk_reuseport, sock_flag(sk, SOCK_KEEPOPEN));
